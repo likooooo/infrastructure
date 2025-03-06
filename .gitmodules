@@ -1,0 +1,18 @@
+[submodule "type_traist_notebook"]
+	path = type_traist_notebook
+	url = git@github.com:likooooo/type_traist_notebook.git
+[submodule "py_visualizer"]
+	path = py_visualizer
+	url = git@github.com:likooooo/py_visualizer.git
+[submodule "mekil"]
+	path = mekil
+	url = git@github.com:likooooo/mekil.git
+[submodule "cuda"]
+	path = cuda
+	url = git@github.com:likooooo/cuda.git
+[submodule "kernels"]
+	path = kernels
+	url = git@github.com:likooooo/kernels.git
+[submodule "fft"]
+	path = fft
+	url = git@github.com:likooooo/fft.git
