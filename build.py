@@ -12,8 +12,11 @@ for path in paths:
     full_path = os.path.join(os.getcwd(), path)
     
     # 执行一系列命令
+    print(f"begin {full_path}")
+    os.system(f"cd {full_path} &&sudo rm -r build")
     assert(0 == os.system(f"cd {full_path} && cmake -S . -B build"))
-    assert(0 == os.system(f"cd {full_path} && cmake --build build"))
+    assert(0 == os.system(f"cd {full_path} && cmake --build build -j"))
+    assert(0 == os.system(f"cd {full_path}/build && ctest"))
     assert(0 == os.system(f"cd {full_path} && sudo cmake --install build"))
 
 print(f"build success {paths}")
