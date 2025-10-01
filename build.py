@@ -16,7 +16,8 @@ for path in paths:
     os.system(f"cd {full_path} &&sudo rm -r build")
     assert(0 == os.system(f"cd {full_path} && cmake -S . -B build"))
     assert(0 == os.system(f"cd {full_path} && cmake --build build -j"))
-    # assert(0 == os.system(f"cd {full_path}/build && ctest"))
+    assert(0 == os.system(f"cd {full_path}/build && ctest -V"))
+    if "fft" in full_path: continue
     assert(0 == os.system(f"cd {full_path} && sudo cmake --install build"))
 
 print(f"build success {paths}")
