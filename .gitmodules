@@ -10,9 +10,6 @@
 [submodule "cuda"]
 	path = cuda
 	url = git@github.com:likooooo/cuda.git
-[submodule "fft"]
-	path = fft
-	url = git@github.com:likooooo/fft.git
 [submodule "kernels"]
 	path = kernels
 	url = git@github.com:likooooo/kernels.git
