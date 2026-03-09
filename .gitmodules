@@ -13,6 +13,6 @@
 [submodule "kernels"]
 	path = kernels
 	url = git@github.com:likooooo/kernels.git
-[submodule "fft"]
-	path = fft
-	url = git@github.com:likooooo/fft.git
+[submodule "unified_computing_architecture"]
+	path = unified_computing_architecture
+	url = git@github.com:likooooo/unified_computing_architecture.git

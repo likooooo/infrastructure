@@ -1,0 +1,84 @@
+name: Build & Test (build.py)
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# simulation 私有仓库，使用 SSH（需在 Settings → Secrets 中配置 MY_PRIVATE_KEY_1）
+env:
+  SIMULATION_REPO: git@github.com:likooooo/simulation.git
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      # 与 infrastructure / simulation 的 CMake 一致：build-essential, cmake, FFTW, Boost.Python, Eigen, pkg-config
+      - name: Install system dependencies (FFTW, Boost, Eigen, MPI, HDF5)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+              build-essential \
+              cmake \
+              pkg-config \
+              libfftw3-dev \
+              libboost-all-dev \
+              libeigen3-dev
+
+      - name: Install SSH Key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.MY_PRIVATE_KEY_1 }}
+
+      - name: Add GitHub and Server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -t rsa,ed25519 github.com >> ~/.ssh/known_hosts
+          ssh-keyscan -H 47.94.195.108 >> ~/.ssh/known_hosts
+
+      - name: Clone simulation_golden_data (sibling)
+        run: |
+          cd "$GITHUB_WORKSPACE/.."
+          git clone --depth 1 git@github.com:likooooo/simulation_golden_data.git simulation_golden_data
+          cd simulation_golden_data && python3 ./setup_simulation_data.py -v --source_dir golden_data
+          cd "$GITHUB_WORKSPACE"
+
+      - name: Checkout main repository
+        uses: actions/checkout@v4
+        with:
+          # 【关键 1】不要在这里写 submodules: recursive
+          # 这样插件只拉取主库，不会去碰子模块的 Auth
+          persist-credentials: false
+
+      - name: Initialize and Update Submodules
+        # 【关键 2】手动执行 git 命令，此时它会完美使用 ssh-agent 里的 Key
+        run: |
+          git submodule update --init --recursive --depth 1
+
+      # Intel oneAPI MKL（mekil、simulation/rcwa_solver、fdtd_solver 依赖）
+      - name: Install Intel oneAPI MKL
+        run: |
+          wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+          sudo apt-get update
+          sudo apt-get install -y intel-oneapi-mkl-devel
+
+      # CUDA Toolkit（infrastructure/cuda 的 CUDAToolkit 依赖）
+      - name: Install CUDA Toolkit
+        uses: Jimver/cuda-toolkit@v0.2.30
+        with:
+          cuda: "12.6.0"
+
+      - name: Build and test each submodule (build.py)
+        env:
+          # mekil 的 find_package(MKL CONFIG REQUIRED PATHS $ENV{MKLROOT})
+          MKLROOT: /opt/intel/oneapi/mkl/latest
+        run: |
+          if [ ! -d "$MKLROOT" ]; then
+            MKLROOT=$(ls -d /opt/intel/oneapi/mkl/20* 2>/dev/null | head -1)
+            export MKLROOT
+          fi
+          source /opt/intel/oneapi/setvars.sh 2>/dev/null || true
+          python3 build.py
