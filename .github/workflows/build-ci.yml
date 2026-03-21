@@ -3,7 +3,7 @@ name: Build & Test (build.py)
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main-ignore]
 
 # simulation 私有仓库，使用 SSH（需在 Settings → Secrets 中配置 MY_PRIVATE_KEY_1）
 env:
