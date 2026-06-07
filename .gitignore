@@ -1,1 +1,4 @@
 .venv
+.inf_install
+.vscode
+__pycache__/
