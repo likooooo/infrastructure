@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import shutil
 import subprocess
@@ -74,17 +75,41 @@ def resolve_install_mode(use_root: bool) -> InstallMode:
     return InstallMode("root", (), sudo_install=not usr_local_writable)
 
 
+def requirements_sha256() -> str | None:
+    if not os.path.exists(REQUIREMENTS):
+        return None
+    with open(REQUIREMENTS, "rb") as file:
+        return hashlib.sha256(file.read()).hexdigest()
+
+
 def ensure_venv_and_deps() -> None:
-    """Create venv if missing and install py_visualizer/requirements.txt."""
-    if not os.path.exists(VENV_DIR):
+    """Fallback: create venv and install deps if init-build-env.sh was not sourced."""
+    stamp = os.path.join(VENV_DIR, ".requirements.sha256")
+    req_hash = requirements_sha256()
+    venv_python = os.path.join(VENV_DIR, "bin", "python3")
+    venv_ok = os.path.exists(venv_python)
+    stamp_ok = (
+        req_hash is not None
+        and os.path.exists(stamp)
+        and open(stamp, encoding="utf-8").read().strip() == req_hash
+    )
+    if venv_ok and stamp_ok:
+        prepend_env_path("PATH", os.path.join(VENV_DIR, "bin"))
+        return
+
+    if req_hash is None:
+        print(f"Skip pip install: {REQUIREMENTS} not found")
+        return
+
+    if not venv_ok:
         print(f"Creating venv at {VENV_DIR}")
         subprocess.run([sys.executable, "-m", "venv", VENV_DIR], check=True)
     pip = os.path.join(VENV_DIR, "bin", "pip")
-    if not os.path.exists(REQUIREMENTS):
-        print(f"Skip pip install: {REQUIREMENTS} not found")
-        return
     print(f"Installing dependencies from {REQUIREMENTS}")
     subprocess.run([pip, "install", "-r", REQUIREMENTS], check=True)
+    with open(stamp, "w", encoding="utf-8") as file:
+        file.write(req_hash)
+    prepend_env_path("PATH", os.path.join(VENV_DIR, "bin"))
 
 
 def require_build_env() -> None:

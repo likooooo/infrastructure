@@ -22,7 +22,8 @@ Host 代码使用 **C++26**（CMake 3.30+、Clang 20）；`cuda` 子模块中设
 | 依赖 | 用途 |
 |------|------|
 | Clang 20、llvm-20-dev | 编译器 |
-| CMake 3.30+ | 构建（`build.py` 会在 `.venv` 中安装） |
+| CMake 3.30+ | 构建（`init-build-env.sh` 在 `.venv` 中安装；`build.py` 兜底） |
+| python3-venv | 创建 `.venv` |
 | Intel oneMKL | mekil；由 `scripts/init-build-env.sh` 配置 |
 | Boost.Python、Python3 dev | py_visualizer |
 | CUDA Toolkit | cuda 子模块 |
@@ -76,11 +77,11 @@ flowchart LR
 ### 前置条件（Ubuntu 24.04）
 
 ```bash
-sudo apt install -y clang-20 llvm-20-dev
-source scripts/init-build-env.sh    # Clang 20、MKL、CUDA 路径
+sudo apt install -y clang-20 llvm-20-dev python3-venv
+source scripts/init-build-env.sh    # .venv（cmake 3.30+）、Clang 20、MKL、CUDA 路径
 ```
 
-`build.py` 首次运行时会创建 `.venv` 并安装 `py_visualizer/requirements.txt`（含 `cmake>=3.30`、numpy、matplotlib 等）。
+`init-build-env.sh` 会创建 `.venv` 并安装 `py_visualizer/requirements.txt`（含 `cmake>=3.30`、numpy、matplotlib 等）。若未 source 直接运行 `build.py`，脚本会兜底创建 venv。
 
 ### 标准流程（用户前缀安装）
 

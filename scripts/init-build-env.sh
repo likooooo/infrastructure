@@ -1,17 +1,46 @@
 # Compile-time environment initialization (source before cmake / build.py).
 #   source /path/to/infrastructure/scripts/init-build-env.sh
 #
-# Sets: Clang 20, MKL (MKLROOT, setvars, include/lib paths, mkl.h check), CUDA (optional).
+# Sets: Python venv (.venv, cmake>=3.30 + py deps), Clang 20, MKL, CUDA (optional).
 # In GitHub Actions, also persists MKL/CUDA vars to GITHUB_ENV when present.
 #
 # One-time system packages (requires sudo):
 #   sudo apt update
-#   sudo apt install -y clang-20 llvm-20-dev
-#
-# CMake 3.30+ (if system cmake is older):
-#   pip install --upgrade 'cmake>=3.30'
+#   sudo apt install -y clang-20 llvm-20-dev python3-venv
 
 _infra_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+_init_python_venv() {
+    local _req="${_infra_root}/py_visualizer/requirements.txt"
+    local _venv="${_infra_root}/.venv"
+    local _stamp="${_venv}/.requirements.sha256"
+
+    [ -f "$_req" ] || return 0
+
+    local _hash
+    _hash=$(sha256sum "$_req" | awk '{print $1}')
+
+    local _need_install=0
+    if [ ! -x "${_venv}/bin/python3" ]; then
+        _need_install=1
+    elif [ ! -f "$_stamp" ] || [ "$(cat "$_stamp")" != "$_hash" ]; then
+        _need_install=1
+    fi
+
+    if [ "$_need_install" -eq 1 ]; then
+        echo "init-build-env: installing Python deps from ${_req}..." >&2
+        if [ ! -d "$_venv" ]; then
+            python3 -m venv "$_venv" || {
+                echo "init-build-env: python3 -m venv failed. Install: sudo apt install -y python3-venv" >&2
+                return 1 2>/dev/null || exit 1
+            }
+        fi
+        "${_venv}/bin/pip" install -r "$_req"
+        echo "$_hash" > "$_stamp"
+    fi
+
+    export PATH="${_venv}/bin:${PATH}"
+}
 
 _init_mkl() {
     if [ -n "${MKLROOT:-}" ] && [ -d "${MKLROOT}" ]; then
@@ -107,6 +136,8 @@ _persist_ci_env() {
 }
 
 export PATH="${HOME}/.local/bin:${PATH}"
+
+_init_python_venv
 
 if ! command -v clang++-20 >/dev/null 2>&1; then
     echo "init-build-env: clang++-20 not found. Install: sudo apt install -y clang-20" >&2

@@ -42,8 +42,8 @@ jobs:
             llvm-20-dev \
             pkg-config \
             libboost-all-dev \
-            libeigen3-dev
-          pip install --upgrade 'cmake>=3.30'
+            libeigen3-dev \
+            python3-venv
 
       - name: Install Intel oneAPI MKL
         run: |
